@@ -6,28 +6,26 @@ export default async function handler(req, res) {
 
   const SEASON = '2025-26';
 
-  // Try ESPN — no auth needed, fast, CORS-friendly from server side
   try {
-    const res1 = await fetch('https://site.api.espn.com/apis/v2/sports/basketball/nba/standings', {
-      headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' },
-    });
+    const response = await fetch(
+      'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings',
+      { headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' } }
+    );
 
-    if (res1.ok) {
-      const data = await res1.json();
+    if (response.ok) {
+      const data = await response.json();
       const teams = [];
-
-      // ESPN returns standings grouped by conference under data.children
-      const groups = data.children || data.standings?.entries ? [data] : (data.children || []);
+      const groups = data.children || [];
 
       for (const group of groups) {
-        const conf = (group.abbreviation || group.name || '').includes('East') ? 'E' : 'W';
-        const entries = group.standings?.entries || group.entries || [];
+        const conf = (group.abbreviation || group.name || '').toLowerCase().includes('east') ? 'E' : 'W';
+        const entries = group.standings?.entries || [];
         for (const entry of entries) {
           const t = entry.team || {};
           const stats = {};
           for (const s of (entry.stats || [])) stats[s.name] = s.value;
-          const wins   = Math.round(stats.wins   ?? stats.OVW ?? 0);
-          const losses = Math.round(stats.losses ?? stats.OVL ?? 0);
+          const wins   = Math.round(stats.wins   ?? 0);
+          const losses = Math.round(stats.losses ?? 0);
           if (!t.displayName) continue;
           teams.push({
             teamId:     parseInt(t.id) || 0,
@@ -48,22 +46,21 @@ export default async function handler(req, res) {
       }
     }
   } catch (e) {
-    console.warn('ESPN standings failed:', e.message);
+    console.warn('ESPN fetch failed:', e.message);
   }
 
-  // Always fall back gracefully — never return a 500
-  console.log('Using hardcoded fallback standings');
   return res.status(200).json(buildFallback(SEASON));
 }
 
 function buildResponse(teams, season, isFallback) {
   teams.sort((a, b) => b.losses !== a.losses ? b.losses - a.losses : a.wins - b.wins);
-  cconst lottery = teams.slice(0, 18).map((t, i) => ({
+
+  const lottery = teams.slice(0, 18).map((t, i) => ({
     ...t,
     recordRank: i,
-    group:      Math.floor(i / 6),
-    groupRank:  5 - (i % 6),
-    ballCount:  5 - (i % 6) + 1,
+    group:     Math.floor(i / 6),
+    groupRank: 5 - (i % 6),
+    ballCount: 5 - (i % 6) + 1,
   }));
 
   const tiedPairs = [];
@@ -110,26 +107,21 @@ function buildFallback(season) {
     {teamId:1610612755,city:'Philadelphia',name:'76ers',         conf:'E',wins:41,losses:34},
     {teamId:1610612756,city:'Phoenix',     name:'Suns',          conf:'W',wins:42,losses:33},
   ];
+
+  const ABBR = {
+    'Indiana Pacers':'IND','Washington Wizards':'WAS','Brooklyn Nets':'BKN',
+    'Sacramento Kings':'SAC','Utah Jazz':'UTA','Dallas Mavericks':'DAL',
+    'Memphis Grizzlies':'MEM','New Orleans Pelicans':'NOP','Chicago Bulls':'CHI',
+    'Milwaukee Bucks':'MIL','Golden State Warriors':'GSW','Portland Trail Blazers':'POR',
+    'Charlotte Hornets':'CHA','LA Clippers':'LAC','Miami Heat':'MIA',
+    'Orlando Magic':'ORL','Philadelphia 76ers':'PHI','Phoenix Suns':'PHX',
+  };
+
   return buildResponse(raw.map(t => ({
-    ...t, fullName: `${t.city} ${t.name}`,
-    abbr: teamAbbr(`${t.city} ${t.name}`),
-    winPct: t.wins / (t.wins + t.losses),
+    ...t,
+    fullName:   `${t.city} ${t.name}`,
+    abbr:       ABBR[`${t.city} ${t.name}`] || t.name.substring(0, 3).toUpperCase(),
+    winPct:     t.wins / (t.wins + t.losses),
     confW: 0, confL: 0, confWinPct: 0,
   })), season, true);
-}
-
-function teamAbbr(fullName) {
-  const map = {
-    'Atlanta Hawks':'ATL','Boston Celtics':'BOS','Brooklyn Nets':'BKN',
-    'Charlotte Hornets':'CHA','Chicago Bulls':'CHI','Cleveland Cavaliers':'CLE',
-    'Dallas Mavericks':'DAL','Denver Nuggets':'DEN','Detroit Pistons':'DET',
-    'Golden State Warriors':'GSW','Houston Rockets':'HOU','Indiana Pacers':'IND',
-    'LA Clippers':'LAC','Los Angeles Lakers':'LAL','Memphis Grizzlies':'MEM',
-    'Miami Heat':'MIA','Milwaukee Bucks':'MIL','Minnesota Timberwolves':'MIN',
-    'New Orleans Pelicans':'NOP','New York Knicks':'NYK','Oklahoma City Thunder':'OKC',
-    'Orlando Magic':'ORL','Philadelphia 76ers':'PHI','Phoenix Suns':'PHX',
-    'Portland Trail Blazers':'POR','Sacramento Kings':'SAC','San Antonio Spurs':'SAS',
-    'Toronto Raptors':'TOR','Utah Jazz':'UTA','Washington Wizards':'WAS',
-  };
-  return map[fullName] || fullName.substring(0, 3).toUpperCase();
 }
