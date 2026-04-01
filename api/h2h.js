@@ -1,5 +1,7 @@
 // api/h2h.js
-// Returns current-season H2H record between two teams for tiebreak resolution
+// Gets H2H record between two teams this season using ESPN's team schedule endpoint.
+// ESPN uses their own team IDs (different from NBA.com IDs) so we map them first.
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -11,51 +13,44 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'teamA and teamB required' });
   }
 
-  const SEASON = '2025-26';
+  // Map NBA.com team IDs → ESPN team IDs
+  const ESPN_ID = {
+    1610612737: 1,   // Atlanta Hawks
+    1610612738: 2,   // Boston Celtics
+    1610612751: 17,  // Brooklyn Nets
+    1610612766: 30,  // Charlotte Hornets
+    1610612741: 4,   // Chicago Bulls
+    1610612739: 5,   // Cleveland Cavaliers
+    1610612742: 6,   // Dallas Mavericks
+    1610612743: 7,   // Denver Nuggets
+    1610612765: 8,   // Detroit Pistons
+    1610612744: 9,   // Golden State Warriors
+    1610612745: 10,  // Houston Rockets
+    1610612754: 11,  // Indiana Pacers
+    1610612746: 12,  // LA Clippers
+    1610612747: 13,  // Los Angeles Lakers
+    1610612763: 14,  // Memphis Grizzlies
+    1610612748: 15,  // Miami Heat
+    1610612749: 16,  // Milwaukee Bucks
+    1610612750: 16,  // Minnesota Timberwolves — ESPN ID 18 (below)
+    1610612740: 3,   // New Orleans Pelicans
+    1610612752: 18,  // New York Knicks — ESPN ID 19 (below)
+    1610612760: 25,  // Oklahoma City Thunder
+    1610612753: 20,  // Orlando Magic
+    1610612755: 20,  // Philadelphia 76ers — ESPN ID 23 (below)
+    1610612756: 24,  // Phoenix Suns
+    1610612757: 22,  // Portland Trail Blazers
+    1610612758: 26,  // Sacramento Kings
+    1610612759: 27,  // San Antonio Spurs
+    1610612761: 28,  // Toronto Raptors
+    1610612762: 29,  // Utah Jazz
+    1610612764: 27,  // Washington Wizards — ESPN ID 27 (below)
+  };
 
-  try {
-    const url =
-      `https://stats.nba.com/stats/leaguegamefinder` +
-      `?PlayerOrTeam=T&TeamID=${teamA}&Season=${SEASON}&SeasonType=Regular+Season` +
-      `&LeagueID=00&VsTeamID=${teamB}`;
-
-    const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Origin': 'https://www.nba.com',
-        'Referer': 'https://www.nba.com/',
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-        'x-nba-stats-origin': 'stats',
-        'x-nba-stats-token': 'true',
-      },
-    });
-
-    if (!response.ok) throw new Error(`NBA API ${response.status}`);
-
-    const data = await response.json();
-    const rs = data.resultSets[0];
-    const WL = rs.headers.indexOf('WL');
-    let wins = 0, losses = 0;
-    rs.rowSet.forEach(row => {
-      if (row[WL] === 'W') wins++;
-      else if (row[WL] === 'L') losses++;
-    });
-
-    const games = wins + losses;
-    let winner = null;
-    let status = games === 0 ? 'no_games' : wins > losses ? 'complete' : losses > wins ? 'complete' : 'tied';
-    if (status === 'complete') winner = wins > losses ? parseInt(teamA) : parseInt(teamB);
-
-    return res.status(200).json({
-      success: true,
-      teamA: parseInt(teamA), teamB: parseInt(teamB),
-      teamAWins: wins, teamALosses: losses,
-      gamesPlayed: games, winner, status,
-    });
-
-  } catch (err) {
-    console.error('H2H error:', err);
-    return res.status(500).json({ success: false, error: err.message });
-  }
-}
+  // Correct ESPN ID map (NBA.com ID → ESPN ID)
+  const ESPNID = {
+    1610612737: 1,   // Atlanta Hawks
+    1610612738: 2,   // Boston Celtics
+    1610612751: 17,  // Brooklyn Nets
+    1610612766: 30,  // Charlotte Hornets
+    1610612741: 4,   // Ch
