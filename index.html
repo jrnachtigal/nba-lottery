@@ -192,7 +192,7 @@ const GO_MAP=(()=>{const m={};let p=0;GO_ALLOC.forEach((n,i)=>{for(let j=0;j<n;j
 
 // IN-GROUP PICKS — 6 team ranks, 286/238/190/143/95/48 combos
 // rank 0 = best record (most combos), rank 5 = worst record
-const TEAM_ALLOC=[286,238,190,143,95,48];
+const TEAM_ALLOC=[48,95,143,190,238,286];
 const TEAM_MAP=(()=>{const m={};let p=0;TEAM_ALLOC.forEach((n,ri)=>{for(let j=0;j<n;j++)m[USABLE[p+j].join('-')]=ri;p+=n;});return m;})();
 
 function draw4(){
@@ -291,7 +291,7 @@ function renderOv(el){
   });
   h+='</div>';
   h+=`<div class="infocard" style="margin-bottom:16px"><div class="slabel" style="margin-bottom:12px">In-group picks — combo allocation (1,000 total per group)</div><table class="otable"><thead><tr><th>Position in group</th><th>Combinations</th><th>Odds (pick #1)</th></tr></thead><tbody>`;
-  ['Best record','2nd best','3rd best','4th best','5th best','Worst record'].forEach((lbl,i)=>{h+=`<tr><td>${lbl}</td><td><strong style="color:var(--gold)">${TEAM_ALLOC[i]}</strong> / 1,000</td><td>${(TEAM_ALLOC[i]/10).toFixed(1)}%</td></tr>`;});
+  ['Worst record','2nd worst','3rd worst','4th worst','5th worst','Best record'].forEach((lbl,i)=>{h+=`<tr><td>${lbl}</td><td><strong style="color:var(--gold)">${TEAM_ALLOC[i]}</strong> / 1,000</td><td>${(TEAM_ALLOC[i]/10).toFixed(1)}%</td></tr>`;});
   h+=`</tbody></table></div>`;
   h+=`<div class="infocard"><div class="slabel" style="margin-bottom:12px">Group order draw — combo allocation (1,000 total)</div><table class="otable"><thead><tr><th>Order drawn</th><th>Combinations</th><th>Odds</th></tr></thead><tbody>`;
   GROUP_ORDERINGS.forEach((ord,i)=>{
