@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -139,16 +138,6 @@ body{background:var(--bg);color:var(--txt);font-family:'Barlow',sans-serif;font-
 .mpnum{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:var(--gold)}
 .mpname{font-size:12px;font-weight:600}
 .mpcombo{font-size:10px;color:var(--faint);font-family:'Barlow Condensed',sans-serif;font-weight:600}
-.histlist{background:var(--surf);border-radius:var(--rad);border:1px solid var(--border);overflow:hidden}
-.hrow{display:flex;align-items:center;border-bottom:1px solid var(--border)}
-.hrow:last-child{border-bottom:none}.hrow:hover{background:var(--surf2)}
-.hn{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--faint);width:36px;text-align:center;flex-shrink:0}
-.hlogo{width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.hlogo img{width:28px;height:28px;object-fit:contain}
-.hinfo{flex:1;padding:10px 0 10px 4px}
-.hp1{font-size:13px;font-weight:600}
-.hmeta{font-size:11px;color:var(--muted);margin-top:2px}
-.htime{font-size:11px;color:var(--faint);padding:0 14px;white-space:nowrap}
 .empty{text-align:center;padding:64px 0;color:var(--muted);font-size:14px}
 @keyframes cffall{0%{transform:translateY(-10px) rotate(0);opacity:1}100%{transform:translateY(105vh) rotate(720deg);opacity:0}}
 </style>
@@ -170,51 +159,29 @@ body{background:var(--bg);color:var(--txt);font-family:'Barlow',sans-serif;font-
     <button class="tab on" onclick="sw('ov',this)">Overview</button>
     <button class="tab" onclick="sw('run',this)">Run Lottery</button>
     <button class="tab" onclick="sw('step',this)">Step-by-Step</button>
-    <button class="tab" onclick="sw('hist',this)">History</button>
   </div>
   <div id="main">
     <div class="loadstate"><div class="spinner"></div><div class="loadtxt">Fetching live NBA standings…</div></div>
   </div>
 </div>
 <script>
-
-// ════════════════════════════════════════════════════
-// LOTTERY MATH — 14-ball, C(14,4)=1001 combinations
-// ════════════════════════════════════════════════════
 const ALL_COMBOS=(()=>{const c=[];for(let a=1;a<=14;a++)for(let b=a+1;b<=14;b++)for(let cc=b+1;cc<=14;cc++)for(let d=cc+1;d<=14;d++)c.push([a,b,cc,d]);return c;})();
 const VOID_KEY='11-12-13-14';
-const USABLE=ALL_COMBOS.filter(c=>c.join('-')!==VOID_KEY); // exactly 1000
-
-// GROUP ORDER — 6 orderings of 3 groups, equal 1000-combo share
+const USABLE=ALL_COMBOS.filter(c=>c.join('-')!==VOID_KEY);
 const GROUP_ORDERINGS=[[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]];
 const GO_ALLOC=[167,167,167,167,166,166];
 const GO_MAP=(()=>{const m={};let p=0;GO_ALLOC.forEach((n,i)=>{for(let j=0;j<n;j++)m[USABLE[p+j].join('-')]=i;p+=n;});return m;})();
-
-// IN-GROUP PICKS — 6 team ranks, 286/238/190/143/95/48 combos
-// rank 0 = best record (most combos), rank 5 = worst record
+// rank 0 = best record in group (286 combos), rank 5 = worst record (48 combos)
 const TEAM_ALLOC=[286,238,190,143,95,48];
 const TEAM_MAP=(()=>{const m={};let p=0;TEAM_ALLOC.forEach((n,ri)=>{for(let j=0;j<n;j++)m[USABLE[p+j].join('-')]=ri;p+=n;});return m;})();
+function draw4(){const balls=Array.from({length:14},(_,i)=>i+1);const drawn=[];for(let i=0;i<4;i++){const idx=Math.floor(Math.random()*balls.length);drawn.push(balls.splice(idx,1)[0]);}drawn.sort((a,b)=>a-b);return{balls:drawn,key:drawn.join('-')};}
 
-function draw4(){
-  const balls=Array.from({length:14},(_,i)=>i+1);
-  const drawn=[];
-  for(let i=0;i<4;i++){const idx=Math.floor(Math.random()*balls.length);drawn.push(balls.splice(idx,1)[0]);}
-  drawn.sort((a,b)=>a-b);
-  return {balls:drawn,key:drawn.join('-')};
-}
-
-// ════════════════════════════════════════════════════
-// APP STATE
-// ════════════════════════════════════════════════════
 let TEAMS=[],GROUPS=[],HISTORY=[];
 let activeTab='ov',autoRunning=false,MS=null;
 const GN=['Group 1','Group 2','Group 3'];
 const GGC=['gg1','gg2','gg3'],DTC=['dt1','dt2','dt3'],GCLS=['gc1','gc2','gc3'];
 const TIDS={ATL:1610612737,BOS:1610612738,BKN:1610612751,CHA:1610612766,CHI:1610612741,CLE:1610612739,DAL:1610612742,DEN:1610612743,DET:1610612765,GSW:1610612744,HOU:1610612745,IND:1610612754,LAC:1610612746,LAL:1610612747,MEM:1610612763,MIA:1610612748,MIL:1610612749,MIN:1610612750,NOP:1610612740,NYK:1610612752,OKC:1610612760,ORL:1610612753,PHI:1610612755,PHX:1610612756,POR:1610612757,SAC:1610612758,SAS:1610612759,TOR:1610612761,UTA:1610612762,WAS:1610612764};
 
-// ════════════════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════════════════
 async function init(){
   try{
     setDot('loading','Fetching standings…');
@@ -226,11 +193,7 @@ async function init(){
     TEAMS=resolved;
     GROUPS=[0,1,2].map(g=>TEAMS.filter(t=>t.group===g));
     const ts=new Date(data.lastUpdated).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    if(data.isFallback){
-      setDot('warn','Using cached standings — NBA API unavailable');
-    } else {
-      setDot('live',`Live · Updated ${ts}`);
-    }
+    if(data.isFallback){setDot('warn','Using cached standings — NBA API unavailable');}else{setDot('live',`Live · Updated ${ts}`);}
     document.getElementById('sbadge').textContent=data.season||'2025–26';
     renderTab(activeTab);
   }catch(err){
@@ -270,17 +233,19 @@ async function resolveTies(teams,pairs){
   return out;
 }
 
-// ════════════════════════════════════════════════════
-// TABS
-// ════════════════════════════════════════════════════
 function sw(tab,el){activeTab=tab;document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');if(TEAMS.length)renderTab(tab);}
-function renderTab(tab){const el=document.getElementById('main');if(tab==='ov')renderOv(el);else if(tab==='run')renderRun(el);else if(tab==='step')renderStep(el);else if(tab==='hist')renderHist(el);}
+function renderTab(tab){const el=document.getElementById('main');if(tab==='ov')renderOv(el);else if(tab==='run')renderRun(el);else if(tab==='step')renderStep(el);}
 
-// ════════════════════════════════════════════════════
-// OVERVIEW
-// ════════════════════════════════════════════════════
 function renderOv(el){
-  let h='<div class="ggroups">';
+  let h='';
+  h+=`<div class="infocard" style="margin-bottom:26px">
+    <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:10px">How the lottery works</div>
+    <p style="font-size:14px;line-height:1.75;color:var(--txt);margin-bottom:12px">This simulator uses a <strong style="font-weight:600">three-group weighted combination lottery</strong> — a proposed alternative to the NBA's current system. The 18 teams with the worst records are split into three groups of six. The lottery then runs in two phases.</p>
+    <p style="font-size:14px;line-height:1.75;color:var(--txt);margin-bottom:12px"><strong style="font-weight:600">Phase 1 — Group order draw.</strong> A drum containing 14 ping-pong balls numbered 1–14 is used. Four balls are drawn without replacement. The sorted 4-ball combination maps to one of 1,000 pre-assigned combos, which determines the order the three groups will pick in. All six possible orderings have equal odds (~16.7% each).</p>
+    <p style="font-size:14px;line-height:1.75;color:var(--txt);margin-bottom:12px"><strong style="font-weight:600">Phase 2 — In-group picks.</strong> For each group, the same 14-ball drum is used to draw picks 1 through 6 sequentially. Each of the 1,000 combinations is pre-assigned to a team based on record — the team with the <strong style="font-weight:600">best record in the group gets 286 combinations (28.6%)</strong>, down to 48 combinations (4.8%) for the worst record. Once a team wins a pick, their combinations are retired and the drum is drawn again for the next pick.</p>
+    <p style="font-size:14px;line-height:1.75;color:var(--txt)">If the void combination {11·12·13·14} is drawn at any point, it is discarded and the drum is redrawn. Tiebreakers between teams with identical records are resolved using current-season head-to-head record, then conference win percentage, then a coin flip.</p>
+  </div>`;
+  h+='<div class="ggroups">';
   GROUPS.forEach((grp,gi)=>{
     h+=`<div class="gcard ${GCLS[gi]}"><div class="gcardh"><span class="glabel">${GN[gi]}</span><span style="font-size:10px;color:var(--muted)">Picks 1–6</span></div>`;
     grp.forEach(t=>{
@@ -303,9 +268,6 @@ function renderOv(el){
   el.innerHTML=h;
 }
 
-// ════════════════════════════════════════════════════
-// AUTO LOTTERY
-// ════════════════════════════════════════════════════
 function renderRun(el){
   el.innerHTML=`<div class="ctrl"><button class="btn btn-gold" id="btnrun" onclick="startAuto()">▶ Run Full Lottery</button><button class="btn btn-ghost" onclick="resetRun()">↺ Reset</button></div><div id="runbody"><div class="empty">Press Run Full Lottery to draw the 2025–26 draft order</div></div>`;
 }
@@ -316,26 +278,21 @@ async function startAuto(){
   autoRunning=true;
   const btnEl=document.getElementById('btnrun');if(btnEl)btnEl.disabled=true;
   const body=document.getElementById('runbody');
-
-  // Phase 1: Group order
   body.innerHTML=`<div class="progwrap"><div class="progbar" id="aprog" style="width:0%"></div></div>
     <div class="machine"><div class="mlabel">Phase 1 — Group Order Draw</div>
       <div class="dstatus" id="apst"><span class="dsmain">Drawing group order…</span></div>
-      ${drumHTML('apdrum')}
-      <div id="ap-rd"></div>
+      ${drumHTML('apdrum')}<div id="ap-rd"></div>
     </div>
     <div class="gostrip" id="apgo"></div>`;
-
-  await sl(300);
-  let goResult;
-  let goTries=0;
+  await sl(150);
+  let goResult;let goTries=0;
   while(true){
     goTries++;
-    if(goTries>1){document.getElementById('ap-rd').innerHTML=`<div class="redraw-note">Void combo {11·12·13·14} — redrawing…</div>`;await sl(500);resetDrum('apdrum');}
-    await spinDrum('apdrum',900);
+    if(goTries>1){document.getElementById('ap-rd').innerHTML=`<div class="redraw-note">Void combo {11·12·13·14} — redrawing…</div>`;await sl(250);resetDrum('apdrum');}
+    await spinDrum('apdrum',400);
     const att=draw4();
     await animateDraw('apdrum',att.balls);
-    if(att.key===VOID_KEY){setSt('apst','Void combination — redraw!','');await sl(600);resetDrum('apdrum');continue;}
+    if(att.key===VOID_KEY){setSt('apst','Void combination — redraw!','');await sl(250);resetDrum('apdrum');continue;}
     const oi=GO_MAP[att.key];
     if(oi===undefined){resetDrum('apdrum');continue;}
     goResult={ordering:GROUP_ORDERINGS[oi],combo:att.balls,key:att.key};
@@ -344,26 +301,20 @@ async function startAuto(){
   document.getElementById('ap-rd').innerHTML='';
   setTrayResult('apdrum',goResult.combo,null,null,goResult.ordering);
   setSt('apst',goResult.ordering.map(g=>GN[g]).join(' → '),`Combo {${goResult.combo.join('·')}}`);
-  const ordLabel=goResult.ordering.map((gi,pos)=>`<div class="gob"><span class="goslot">${pos+1}.</span><span class="gogrp ${GGC[gi]}">${GN[gi]}</span></div>`).join(`<span class="goarr">→</span>`);
-  document.getElementById('apgo').innerHTML=ordLabel;
+  document.getElementById('apgo').innerHTML=goResult.ordering.map((gi,pos)=>`<div class="gob"><span class="goslot">${pos+1}.</span><span class="gogrp ${GGC[gi]}">${GN[gi]}</span></div>`).join(`<span class="goarr">→</span>`);
   setProg('aprog',12);
-  await sl(900);
-
-  // Phase 2: Team picks
+  await sl(400);
   const slotResults=[];
   for(let slot=0;slot<3;slot++){
     const gi=goResult.ordering[slot];
     const grp=GROUPS[gi];
     const basePct=12+(slot/3)*88;
     body.innerHTML+=`<div id="gsec-${slot}"></div>`;
-    const sec=document.getElementById(`gsec-${slot}`);
-    sec.innerHTML=`<div class="machine" style="margin-top:16px"><div class="mlabel">Slot ${slot+1} — ${GN[gi]}</div>
+    document.getElementById(`gsec-${slot}`).innerHTML=`<div class="machine" style="margin-top:16px"><div class="mlabel">Slot ${slot+1} — ${GN[gi]}</div>
       <div class="dstatus" id="gpst-${slot}"><span class="dsmain">Drawing picks…</span></div>
-      ${drumHTML(`gdrum-${slot}`)}
-      <div id="grd-${slot}"></div>
-      <div class="picklog" id="glog-${slot}"></div>
-    </div>`;
-    await sl(400);
+      ${drumHTML(`gdrum-${slot}`)}<div id="grd-${slot}"></div>
+      <div class="picklog" id="glog-${slot}"></div></div>`;
+    await sl(200);
     const remaining=new Set([0,1,2,3,4,5]);
     const picks=[];
     for(let pk=1;pk<=6;pk++){
@@ -371,14 +322,14 @@ async function startAuto(){
       let res;let tries=0;
       while(true){
         tries++;
-        if(tries>1){document.getElementById(`grd-${slot}`).innerHTML=`<div class="redraw-note">${tries===2?'Void combo':'Combo already used'} — redraw…</div>`;await sl(450);resetDrum(`gdrum-${slot}`);}
-        await spinDrum(`gdrum-${slot}`,750);
+        if(tries>1){document.getElementById(`grd-${slot}`).innerHTML=`<div class="redraw-note">${tries===2?'Void combo':'Combo already used'} — redraw…</div>`;await sl(200);resetDrum(`gdrum-${slot}`);}
+        await spinDrum(`gdrum-${slot}`,350);
         const att=draw4();
         await animateDraw(`gdrum-${slot}`,att.balls);
-        if(att.key===VOID_KEY){setSt(`gpst-${slot}`,'Void — redraw!','');await sl(500);resetDrum(`gdrum-${slot}`);continue;}
+        if(att.key===VOID_KEY){setSt(`gpst-${slot}`,'Void — redraw!','');await sl(200);resetDrum(`gdrum-${slot}`);continue;}
         const ri=TEAM_MAP[att.key];
         if(ri===undefined){resetDrum(`gdrum-${slot}`);continue;}
-        if(!remaining.has(ri)){setSt(`gpst-${slot}`,'Team already picked — redraw!','');await sl(500);resetDrum(`gdrum-${slot}`);continue;}
+        if(!remaining.has(ri)){setSt(`gpst-${slot}`,'Team already picked — redraw!','');await sl(200);resetDrum(`gdrum-${slot}`);continue;}
         remaining.delete(ri);
         res={teamRank:ri,combo:att.balls,key:att.key};
         break;
@@ -390,10 +341,10 @@ async function startAuto(){
       picks.push(res);
       appendPickLog(`glog-${slot}`,pk,slot*6+pk,t,gi,res.combo);
       setProg('aprog',basePct+(pk/6)*(88/3));
-      await sl(600);
+      await sl(280);
     }
     slotResults.push({gi,picks});
-    await sl(300);
+    await sl(150);
   }
   setProg('aprog',100);
   const fullOrder=buildFullOrder(goResult.ordering,slotResults);
@@ -403,9 +354,6 @@ async function startAuto(){
   confetti();
 }
 
-// ════════════════════════════════════════════════════
-// STEP-BY-STEP MANUAL
-// ════════════════════════════════════════════════════
 function renderStep(el){
   if(!MS)MS=freshMS();
   el.innerHTML=`<div class="ctrl"><button class="btn btn-ghost" onclick="resetStep()">↺ Start Over</button></div><div id="stepbody"></div>`;
@@ -512,26 +460,8 @@ function mFinish(){
   renderStepBody();confetti();
 }
 
-// ════════════════════════════════════════════════════
-// HISTORY
-// ════════════════════════════════════════════════════
-function renderHist(el){
-  let h=`<div class="ctrl"><button class="btn btn-ghost" onclick="clearHist()">Clear History</button><span style="font-size:13px;color:var(--muted)">${HISTORY.length?HISTORY.length+' sim'+(HISTORY.length>1?'s':''):''}</span></div>`;
-  if(!HISTORY.length){h+=`<div class="empty">Run a lottery to see results here</div>`;el.innerHTML=h;return;}
-  h+=`<div class="histlist">`;
-  HISTORY.slice(0,50).forEach((e,i)=>{
-    const p1=e.data.fullOrder[0];
-    const ord=e.data.goResult.ordering.map(gi=>'G'+(gi+1)).join('→');
-    h+=`<div class="hrow"><div class="hn">${i+1}</div><div class="hlogo">${limg(p1.t.abbr,28)}</div><div class="hinfo"><div class="hp1">#1 Pick: <strong style="color:var(--gold)">${p1.t.fullName}</strong></div><div class="hmeta">Order: ${ord} · Group combo: {${e.data.goResult.combo.join('·')}}</div></div><div class="htime">${e.ts}</div></div>`;
-  });
-  h+=`</div>`;el.innerHTML=h;
-}
-function clearHist(){HISTORY=[];renderHist(document.getElementById('main'));}
 function addHist(data){HISTORY.unshift({ts:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}),data});}
 
-// ════════════════════════════════════════════════════
-// RESULTS HTML
-// ════════════════════════════════════════════════════
 function fullHTML({go,goCombo,fullOrder}){
   let h=`<div style="margin-top:22px"><div class="slabel">Group order</div><div class="gostrip" style="margin-bottom:6px">`;
   go.forEach((gi,i)=>{if(i>0)h+=`<span class="goarr">→</span>`;h+=`<div class="gob"><span class="goslot">${i+1}.</span><span class="gogrp ${GGC[gi]}">${GN[gi]}</span></div>`;});
@@ -551,9 +481,6 @@ function buildFullOrder(ordering,slotResults){
   return f;
 }
 
-// ════════════════════════════════════════════════════
-// DRUM ANIMATION HELPERS
-// ════════════════════════════════════════════════════
 function drumHTML(id,drawnBalls=null){
   const drawn=new Set(drawnBalls||[]);
   const balls=Array.from({length:14},(_,i)=>i+1).map(n=>`<div class="nball ${drawn.has(n)?'popped spent':''}" id="${id}-b${n}">${n}</div>`).join('');
@@ -561,33 +488,29 @@ function drumHTML(id,drawnBalls=null){
   const revContent=drawnBalls?`<div class="tray-clbl">Combination</div><div class="tray-cval">{${drawnBalls.join('·')}}</div>`:`<div class="tray-drawing">Awaiting draw…</div>`;
   return`<div class="drum14"><div class="drum14-balls">${balls}</div><div class="tray-lbl">Drawn combination</div><div class="tray">${slots}<div class="tray-reveal" id="${id}-rev">${revContent}</div></div></div>`;
 }
-
 async function spinDrum(id,ms){
   const balls=[];for(let n=1;n<=14;n++){const b=document.getElementById(`${id}-b${n}`);if(b&&!b.classList.contains('spent'))balls.push(b);}
   balls.forEach(b=>b.classList.add('spinning'));
   await sl(ms);
   balls.forEach(b=>b.classList.remove('spinning'));
 }
-
 function resetDrum(id){
   for(let n=1;n<=14;n++){const b=document.getElementById(`${id}-b${n}`);if(b){b.classList.remove('spinning','popped','spent');b.style.opacity='';b.style.transform='';}}
   for(let i=0;i<4;i++){const s=document.getElementById(`${id}-ts${i}`);if(s){s.className='tslot';s.textContent='';}}
   const rev=document.getElementById(`${id}-rev`);if(rev)rev.innerHTML=`<div class="tray-drawing">Awaiting draw…</div>`;
 }
-
 async function animateDraw(id,balls){
   for(let i=0;i<balls.length;i++){
     const n=balls[i];
     const ball=document.getElementById(`${id}-b${n}`);
-    if(ball){ball.classList.remove('spinning');ball.classList.add('popped');await sl(190);ball.classList.add('spent');}
+    if(ball){ball.classList.remove('spinning');ball.classList.add('popped');await sl(80);ball.classList.add('spent');}
     const slot=document.getElementById(`${id}-ts${i}`);
     if(slot){slot.className='tslot filled';slot.textContent=n;}
-    await sl(150);
+    await sl(70);
   }
   const rev=document.getElementById(`${id}-rev`);
   if(rev)rev.innerHTML=`<div class="tray-clbl">Combination</div><div class="tray-cval">{${balls.join('·')}}</div>`;
 }
-
 function setTrayResult(id,combo,team,gi,ordering){
   const rev=document.getElementById(`${id}-rev`);if(!rev)return;
   let h=`<div class="tray-clbl">Combination</div><div class="tray-cval">{${combo.join('·')}}</div>`;
@@ -599,7 +522,6 @@ function setTrayResult(id,combo,team,gi,ordering){
   }
   rev.innerHTML=h;
 }
-
 function appendPickLog(logId,pickInGroup,overall,team,gi,combo){
   const log=document.getElementById(logId);if(!log)return;
   const row=document.createElement('div');row.className='pl-row';
@@ -607,9 +529,6 @@ function appendPickLog(logId,pickInGroup,overall,team,gi,combo){
   log.appendChild(row);
 }
 
-// ════════════════════════════════════════════════════
-// UTILITIES
-// ════════════════════════════════════════════════════
 function aSVG(dir){
   if(dir==='up')return`<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M5 8V2M2 5l3-3 3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   if(dir==='dn')return`<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M5 2v6M2 5l3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
