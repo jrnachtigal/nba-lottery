@@ -1,4 +1,6 @@
-module.exports = async function handler(req, res) {
+// api/h2h.js
+// Returns current-season H2H record between two teams for tiebreak resolution
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -9,51 +11,51 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'teamA and teamB required' });
   }
 
-  const ESPNID = {
-    1610612737:1,1610612738:2,1610612751:17,1610612766:30,1610612741:4,
-    1610612739:5,1610612742:6,1610612743:7,1610612765:8,1610612744:9,
-    1610612745:10,1610612754:11,1610612746:12,1610612747:13,1610612763:14,
-    1610612748:15,1610612749:16,1610612750:18,1610612740:3,1610612752:19,
-    1610612760:25,1610612753:20,1610612755:23,1610612756:24,1610612757:22,
-    1610612758:26,1610612759:27,1610612761:28,1610612762:29,1610612764:27,
-  };
-
-  const espnA = ESPNID[parseInt(teamA)];
-  const espnB = ESPNID[parseInt(teamB)];
-
-  if (!espnA || !espnB) {
-    return res.status(200).json({ success: true, teamA: parseInt(teamA), teamB: parseInt(teamB), teamAWins: 0, teamALosses: 0, gamesPlayed: 0, winner: null, status: 'no_games' });
-  }
+  const SEASON = '2025-26';
 
   try {
-    const url = `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/${espnA}/schedule?season=2026`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`ESPN ${response.status}`);
-    const data = await response.json();
+    const url =
+      `https://stats.nba.com/stats/leaguegamefinder` +
+      `?PlayerOrTeam=T&TeamID=${teamA}&Season=${SEASON}&SeasonType=Regular+Season` +
+      `&LeagueID=00&VsTeamID=${teamB}`;
 
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Origin': 'https://www.nba.com',
+        'Referer': 'https://www.nba.com/',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        'x-nba-stats-origin': 'stats',
+        'x-nba-stats-token': 'true',
+      },
+    });
+
+    if (!response.ok) throw new Error(`NBA API ${response.status}`);
+
+    const data = await response.json();
+    const rs = data.resultSets[0];
+    const WL = rs.headers.indexOf('WL');
     let wins = 0, losses = 0;
-    for (const event of (data.events || [])) {
-      if (event.season?.type !== 2) continue;
-      if (event.status?.type?.completed !== true) continue;
-      const competitors = event.competitions?.[0]?.competitors || [];
-      const teamAComp = competitors.find(c => parseInt(c.id) === espnA);
-      const teamBComp = competitors.find(c => parseInt(c.id) === espnB);
-      if (!teamAComp || !teamBComp) continue;
-      if (teamAComp.winner === true) wins++;
-      else if (teamAComp.winner === false) losses++;
-    }
+    rs.rowSet.forEach(row => {
+      if (row[WL] === 'W') wins++;
+      else if (row[WL] === 'L') losses++;
+    });
 
     const games = wins + losses;
-    let winner = null, status = 'no_games';
-    if (games > 0) {
-      if (wins > losses) { winner = parseInt(teamA); status = 'complete'; }
-      else if (losses > wins) { winner = parseInt(teamB); status = 'complete'; }
-      else status = 'tied';
-    }
+    let winner = null;
+    let status = games === 0 ? 'no_games' : wins > losses ? 'complete' : losses > wins ? 'complete' : 'tied';
+    if (status === 'complete') winner = wins > losses ? parseInt(teamA) : parseInt(teamB);
 
-    return res.status(200).json({ success: true, teamA: parseInt(teamA), teamB: parseInt(teamB), teamAWins: wins, teamALosses: losses, gamesPlayed: games, winner, status });
+    return res.status(200).json({
+      success: true,
+      teamA: parseInt(teamA), teamB: parseInt(teamB),
+      teamAWins: wins, teamALosses: losses,
+      gamesPlayed: games, winner, status,
+    });
 
   } catch (err) {
-    return res.status(200).json({ success: true, teamA: parseInt(teamA), teamB: parseInt(teamB), teamAWins: 0, teamALosses: 0, gamesPlayed: 0, winner: null, status: 'no_games' });
+    console.error('H2H error:', err);
+    return res.status(500).json({ success: false, error: err.message });
   }
-};
+}
