@@ -58,12 +58,12 @@ export default async function handler(req, res) {
 
 function buildResponse(teams, season, isFallback) {
   teams.sort((a, b) => b.losses !== a.losses ? b.losses - a.losses : a.wins - b.wins);
-  const lottery = teams.slice(0, 18).map((t, i) => ({
+  cconst lottery = teams.slice(0, 18).map((t, i) => ({
     ...t,
     recordRank: i,
-    group:     Math.floor(i / 6),
-    groupRank: i % 6,
-    ballCount: (i % 6) + 1,
+    group:      Math.floor(i / 6),
+    groupRank:  5 - (i % 6),
+    ballCount:  5 - (i % 6) + 1,
   }));
 
   const tiedPairs = [];
