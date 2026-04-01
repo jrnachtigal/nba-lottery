@@ -1,4 +1,3 @@
-// api/standings.js
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -7,22 +6,18 @@ export default async function handler(req, res) {
 
   const SEASON = '2025-26';
 
+  // Try ESPN — no auth needed, fast, CORS-friendly from server side
   try {
-    const url = 'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings?season=2026';
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`ESPN API ${response.status}`);
-    const data = await response.json();
+    const res1 = await fetch('https://site.api.espn.com/apis/v2/sports/basketball/nba/standings', {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+    });
 
-    const teams = [];
-    for (const group of data.children) {
-      const conf = group.abbreviation === 'East' ? 'E' : 'W';
-      for (const entry of group.standings.entries) {
-        const t = entry.team;
-        const stats = {};
-        for (const s of entry.stats) stats[s.name] = s.value;
+    if (res1.ok) {
+      const data = await res1.json();
+      const teams = [];
 
-        const wins   = stats['wins']   ?? 0;
-        const losses = stats['losses'] ?? 0;
-        const confW  = stats['leagueWinPercent'] ? 0 : 0; // conf record not in this endpoint
-        teams.push({
-          teamId:     parseInt
+      // ESPN returns standings grouped by conference under data.children
+      const groups = data.children || data.standings?.entries ? [data] : (data.children || []);
+
+      for (const group of groups) {
+        const conf = (group.abbreviation || group.name || '')
