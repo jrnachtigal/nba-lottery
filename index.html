@@ -3,22 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NBA Draft Lottery Simulator (ESPN Feed)</title>
+<title>NBA Draft Lottery Simulator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
 <style>
-    /* Keeping your existing styles for consistency */
-    :root{--bg:#0a0e1a;--surf:#111827;--surf2:#1a2235;--txt:#f0f4ff;--muted:#8892a4;--accent:#3b82f6;}
-    body{background:var(--bg);color:var(--txt);font-family:'Barlow',sans-serif;margin:0;padding:20px;}
-    .container{max-width:1000px;margin:0 auto;}
-    .header{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;}
-    .group-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;}
-    .card{background:var(--surf);border-radius:12px;padding:20px;border:1px solid rgba(255,255,255,0.05);}
-    .team-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03);}
-    .odds-pill{background:var(--surf2);padding:2px 8px;border-radius:4px;font-size:0.85em;color:var(--accent);font-weight:600;}
-    .btn{background:var(--accent);color:white;border:none;padding:12px 24px;border-radius:8px;font-weight:700;cursor:pointer;width:100%;font-size:1.1em;margin-top:20px;}
-    .btn:hover{filter:brightness(1.1);}
-    .livedot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;background:#22c55e;}
+    :root {
+        --bg: #0a0e1a; --surf: #111827; --surf2: #1a2235; --border: rgba(255,255,255,0.07);
+        --txt: #f0f4ff; --muted: #8892a4; --accent: #3b82f6; --g: #22c55e;
+    }
+    body { background: var(--bg); color: var(--txt); font-family: 'Barlow', sans-serif; margin: 0; padding: 20px; line-height: 1.5; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    
+    /* Header & Status */
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+    h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 2.5rem; margin: 0; letter-spacing: -1px; }
+    .status-tag { display: flex; align-items: center; background: var(--surf2); padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+    .livedot { width: 8px; height: 8px; background: var(--g); border-radius: 50%; margin-right: 8px; box-shadow: 0 0 10px var(--g); }
+
+    /* Grid System */
+    .group-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 40px; }
+    .group-card { background: var(--surf); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; position: relative; }
+    .group-header { background: var(--surf2); padding: 15px 20px; border-bottom: 1px solid var(--border); }
+    .group-header h3 { margin: 0; font-family: 'Barlow Condensed'; font-size: 1.4rem; color: var(--accent); }
+    .group-desc { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Team Rows */
+    .team-list { padding: 10px 0; }
+    .team-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid rgba(255,255,255,0.03); transition: 0.2s; }
+    .team-row:last-child { border: none; }
+    .team-info { display: flex; align-items: center; gap: 12px; }
+    .team-logo { width: 32px; height: 32px; object-fit: contain; }
+    .team-name { font-weight: 600; font-size: 1rem; }
+    .team-record { font-size: 0.8rem; color: var(--muted); margin-left: 5px; }
+    .odds-badge { background: rgba(59, 130, 246, 0.1); color: var(--accent); padding: 4px 10px; border-radius: 6px; font-weight: 800; font-family: 'Barlow Condensed'; font-size: 1rem; }
+
+    /* Sim Button */
+    .sim-btn { background: var(--accent); color: white; border: none; width: 100%; padding: 20px; border-radius: 12px; font-family: 'Barlow Condensed'; font-weight: 800; font-size: 1.5rem; cursor: pointer; transition: 0.3s; box-shadow: 0 10px 20px rgba(59,130,246,0.2); }
+    .sim-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+
+    /* Results */
+    .results-area { margin-top: 40px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .result-card { background: linear-gradient(145deg, var(--surf2), var(--surf)); padding: 25px; border-radius: 16px; text-align: center; border: 1px solid var(--accent); }
 </style>
 </head>
 <body>
@@ -26,82 +51,83 @@
 <div class="container">
     <div class="header">
         <h1>NBA LOTTERY SIMULATOR</h1>
-        <div id="status"><span class="livedot"></span> ESPN LIVE FEED</div>
+        <div class="status-tag"><span class="livedot"></span> ESPN LIVE DATA</div>
     </div>
 
-    <div id="app-content">
-        <div class="group-grid" id="groups-container">
-            </div>
-        <button class="btn" onclick="runSim()">RUN LOTTERY SIMULATION</button>
-    </div>
+    <div class="group-grid" id="group-container">
+        </div>
 
-    <div id="results" style="margin-top:40px;"></div>
+    <button class="sim-btn" onclick="runLottery()">SIMULATE DRAFT LOTTERY</button>
+
+    <div class="results-area" id="results"></div>
 </div>
 
 <script>
-    const TEAM_ALLOC = [286, 203, 157, 119, 88, 67]; // Top seed gets 28.6%
-    let lotteryPool = [];
+    const ODDS_DIST = [28.6, 20.3, 15.7, 11.9, 8.8, 6.7];
+    let lotteryTeams = [];
 
-    async function init() {
+    async function fetchStandings() {
+        const container = document.getElementById('group-container');
+        container.innerHTML = '<p style="grid-column: 1/-1; text-align:center;">Analyzing League Standings...</p>';
+        
         try {
-            // Fetching from the new faster Vercel function
             const res = await fetch('/api/standings');
             const data = await res.json();
-            
             if (data.success) {
-                lotteryPool = data.teams;
-                renderGroups();
+                lotteryTeams = data.teams;
+                render();
             }
         } catch (e) {
-            console.error("Failed to load standings", e);
+            container.innerHTML = '<p>Error connecting to data feed.</p>';
         }
     }
 
-    function renderGroups() {
-        const container = document.getElementById('groups-container');
+    function render() {
+        const container = document.getElementById('group-container');
         container.innerHTML = '';
-        
-        for (let i = 0; i < 3; i++) {
-            const groupTeams = lotteryPool.filter(t => t.group === i);
-            let html = `<div class="card"><h3>GROUP ${i + 1}</h3>`;
+
+        [0, 1, 2].forEach(gId => {
+            const label = gId === 0 ? "BOTTOM 6" : gId === 1 ? "7-12 WORST" : "13-18 WORST";
+            const gTeams = lotteryTeams.filter(t => t.group === gId);
             
-            groupTeams.forEach((team, idx) => {
-                const odds = (TEAM_ALLOC[idx] / 10).toFixed(1);
+            let html = `
+                <div class="group-card">
+                    <div class="group-header">
+                        <div class="group-desc">${label}</div>
+                        <h3>GROUP ${gId + 1}</h3>
+                    </div>
+                    <div class="team-list">`;
+            
+            gTeams.forEach((team, idx) => {
+                const logoUrl = `https://a.espncdn.com/i/teamlogos/nba/500/${team.id}.png`;
                 html += `
                     <div class="team-row">
-                        <span><strong>${team.fullName || team.name}</strong> (${team.wins}-${team.losses})</span>
-                        <span class="odds-pill">${odds}% Odds</span>
+                        <div class="team-info">
+                            <img src="${logoUrl}" class="team-logo" onerror="this.style.opacity=0">
+                            <div>
+                                <span class="team-name">${team.name}</span>
+                                <span class="team-record">${team.wins}-${team.losses}</span>
+                            </div>
+                        </div>
+                        <div class="odds-badge">${ODDS_DIST[idx]}%</div>
                     </div>`;
             });
             
-            html += `</div>`;
+            html += `</div></div>`;
             container.innerHTML += html;
-        }
-    }
-
-    function runSim() {
-        // Simple simulation logic based on updated weights
-        const resultsDiv = document.getElementById('results');
-        resultsDiv.innerHTML = "<h2>Lottery Results</h2>";
-        
-        [0, 1, 2].forEach(groupId => {
-            const groupTeams = lotteryPool.filter(t => t.group === groupId);
-            const winner = simulateGroup(groupTeams);
-            resultsDiv.innerHTML += `<p>Group ${groupId + 1} Winner: <strong>${winner.fullName || winner.name}</strong></p>`;
         });
     }
 
-    function simulateGroup(teams) {
-        const rand = Math.random() * 1000;
-        let cumulative = 0;
-        for (let i = 0; i < teams.length; i++) {
-            cumulative += TEAM_ALLOC[i];
-            if (rand <= cumulative) return teams[i];
-        }
-        return teams[0];
-    }
+    function runLottery() {
+        const results = document.getElementById('results');
+        results.innerHTML = '';
 
-    init();
-</script>
-</body>
-</html>
+        [0, 1, 2].forEach(gId => {
+            const gTeams = lotteryTeams.filter(t => t.group === gId);
+            const winner = simulateGroup(gTeams);
+            
+            results.innerHTML += `
+                <div class="result-card">
+                    <div style="color: var(--muted); font-size: 0.8rem; margin-bottom: 10px;">GROUP ${gId+1} WINNER</div>
+                    <img src="https://a.espncdn.com/i/teamlogos/nba/500/${winner.id}.png" style="width:80px; margin-bottom:15px;">
+                    <h2 style="margin:0; font-family:'Barlow
