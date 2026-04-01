@@ -529,8 +529,8 @@ function fullHTML({go,goCombo,fullOrder}){
   go.forEach((gi,i)=>{if(i>0)h+=`<span class="goarr">→</span>`;h+=`<div class="gob"><span class="goslot">${i+1}.</span><span class="gogrp ${GGC[gi]}">${GN[gi]}</span></div>`;});
   h+=`</div><div style="font-size:12px;color:var(--faint);margin-bottom:18px">Winning combo: {${goCombo.join('·')}}</div><div class="slabel">Full draft order — picks 1–18</div><div class="dresults">`;
   fullOrder.forEach(({t,g,o,combo})=>{
-    h+=`<div class="drow"><div class="dpick ${o<=3?'t3':''}">${o}</div><div class="dlogo">${limg(t.abbr,32)}</div><div class="dinfo"><div class="dname">${t.fullName}${arrowBadgeMini(t)}</div><div class="drec">${t.wins}–${t.losses}</div><div class="dcombo">{${combo.join('·')}}</div></div><div class="dright"><span class="dtag ${DTC[g]}">${GN[g]}</span></div></div>`;
-  });
+    const oblig = t.obligation ? `<span style="font-size:10px;color:var(--muted);margin-top:2px">(→ ${t.obligation.to})</span>` : '';
+    h+=`<div class="drow"><div class="dpick ${o<=3?'t3':''}">${o}</div><div class="dlogo">${limg(t.abbr,32)}</div><div class="dinfo"><div class="dname">${t.fullName}</div><div class="drec">${t.wins}–${t.losses}${t.obligation?` <span style="font-size:10px;color:var(--gold)">(→ ${t.obligation.to})</span>`:''}</div><div class="dcombo">{${combo.join('·')}}</div></div><div class="dright"><span class="dtag ${DTC[g]}">${GN[g]}</span>${moved}</div></div>`;
   h+=`</div></div>`;return h;
 }
 function buildFullOrder(ordering,slotResults){
